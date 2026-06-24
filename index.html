@@ -1,4 +1,3 @@
-
 <!DOCTYPE html>
 <html lang="id">
 <head>
@@ -184,7 +183,7 @@
         <p class="cta-desc">Bagikan kreasi instruksi orisinal Anda dan jadilah bagian dari pustaka pengetahuan AI terbesar di Indonesia.</p>
       </div>
       <div>
-        <a href="signup.html" class="btn-primary btn-large">Bagikan Prompt Mu</a>
+        <button class="btn-primary btn-large" onclick="openPublicPromptModal()">Bagikan Prompt Mu</button>
       </div>
     </div>
   </section>
@@ -215,7 +214,7 @@
     </div>
   </footer>
 
-  <!-- PROMPT DETAIL MODAL -->
+  <!-- DETAIL MODAL -->
   <div class="modal-overlay" id="promptModal">
     <div class="modal-card">
       <button class="modal-close" id="modalCloseBtn" aria-label="Tutup Detail">
@@ -223,7 +222,7 @@
       </button>
       <div class="modal-grid">
         <div class="modal-left">
-          <img id="modalImage" src="https://placehold.co/600x400/e0e7ff/4F46E5?text=Prompt+Image" alt="Preview Visual">
+          <img id="modalImage" src="https://placehold.co/600x400/e0e7ff/4F46E5?text=Prompt+Image" alt="Preview Visual" onerror="handleImageError(this)">
         </div>
         <div class="modal-right">
           <div class="modal-meta-header">
@@ -272,6 +271,77 @@
           </div>
 
         </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- PUBLIC ENTRY MODAL (UNTUK TAMU / MEMBER) -->
+  <div class="modal-overlay" id="publicPromptModal">
+    <div class="modal-card" style="max-width: 640px;">
+      <button class="modal-close" id="publicPromptModalCloseBtn" aria-label="Tutup Form">
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+      </button>
+      <div style="padding: 32px;">
+        <h2 class="modal-title" style="margin-bottom: 8px;">Kirim Prompt Baru</h2>
+        <p style="color: var(--color-text-muted); font-size: 14px; margin-bottom: 24px;">Siapa saja dapat menambahkan prompt di sini secara anonim maupun menggunakan nama akun sendiri.</p>
+        
+        <form id="publicPromptForm" onsubmit="handlePublicPromptSubmit(event)">
+          <div class="form-group">
+            <label class="form-label" for="pubCreatorName">Nama Kreator</label>
+            <input type="text" id="pubCreatorName" class="form-input" placeholder="Tulis nama Anda (atau kosongkan untuk Anonim)">
+          </div>
+
+          <div class="form-grid" style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px;">
+            <div class="form-group">
+              <label class="form-label" for="pubTitle">Judul Prompt</label>
+              <input type="text" id="pubTitle" class="form-input" placeholder="Contoh: Kamar Estetik Cozy" required>
+            </div>
+            <div class="form-group">
+              <label class="form-label" for="pubCategory">Kategori</label>
+              <select id="pubCategory" class="select-input" style="width: 100%; height: 46px;" required>
+                <option value="Midjourney">Midjourney</option>
+                <option value="DALL-E">DALL-E</option>
+                <option value="ChatGPT">ChatGPT</option>
+                <option value="Stable Diffusion">Stable Diffusion</option>
+                <option value="Copywriting">Copywriting</option>
+                <option value="Code">Code</option>
+                <option value="Design">Design</option>
+                <option value="Video">Video</option>
+                <option value="Marketing">Marketing</option>
+              </select>
+            </div>
+          </div>
+
+          <div class="form-group">
+            <label class="form-label" for="pubDesc">Deskripsi Ringkas</label>
+            <input type="text" id="pubDesc" class="form-input" placeholder="Fungsi utama atau efek yang dihasilkan" required>
+          </div>
+
+          <div class="form-group">
+            <label class="form-label" for="pubPromptText">Teks Prompt Utama</label>
+            <textarea id="pubPromptText" class="form-input" style="min-height: 100px; font-family: monospace;" placeholder="Tulis instruksi lengkap Anda di sini..." required></textarea>
+          </div>
+
+          <div class="form-grid" style="display: grid; grid-template-columns: 1.2fr 0.8fr; gap: 16px; align-items: center; margin-bottom: 20px;">
+            <div class="form-group" style="margin-bottom: 0;">
+              <label class="form-label">Unggah Ilustrasi/Gambar</label>
+              <input type="file" id="pubImageFile" class="form-input" accept="image/*" onchange="previewPublicUploadImage(this)" required>
+            </div>
+            <div style="text-align: center;">
+              <img id="pubImgPreview" src="" alt="Preview" class="hidden" style="max-height: 90px; max-width: 100%; border-radius: var(--radius-sm); object-fit: cover; border: 1px solid rgba(0,0,0,0.1);">
+            </div>
+          </div>
+
+          <div class="form-group">
+            <label class="form-label" for="pubTags">Tags (pisahkan dengan koma)</label>
+            <input type="text" id="pubTags" class="form-input" placeholder="cozy, lofi, photorealistic">
+          </div>
+
+          <button type="submit" id="pubSubmitBtn" class="btn-primary btn-full">
+            <span class="btn-text">Kirim & Publikasikan Instan</span>
+            <span class="btn-spinner hidden"></span>
+          </button>
+        </form>
       </div>
     </div>
   </div>
