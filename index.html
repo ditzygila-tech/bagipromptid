@@ -50,9 +50,7 @@
 
       <div class="live-counter" id="liveCounter">Memuat jumlah prompt...</div>
 
-      <div class="quick-filters" id="quickFilters">
-        <!-- JS akan menyuntikkan kategori populer di sini -->
-      </div>
+      <div class="quick-filters" id="quickFilters"></div>
     </div>
   </header>
 
@@ -60,9 +58,7 @@
   <section class="section" id="trending">
     <div class="section-container">
       <h2 class="section-title">Prompt Trending Mingguan</h2>
-      <div class="trending-scroll-container" id="trendingContainer">
-        <!-- Render horizontal card di sini via JS -->
-      </div>
+      <div class="trending-scroll-container" id="trendingContainer"></div>
     </div>
   </section>
 
@@ -105,9 +101,7 @@
       </div>
 
       <!-- PROMPT GALLERY -->
-      <div class="prompt-grid" id="promptGallery">
-        <!-- Kartu prompt disuntikkan dinamis melalui JS -->
-      </div>
+      <div class="prompt-grid" id="promptGallery"></div>
 
       <div class="load-more-wrapper">
         <button id="loadMoreBtn" class="btn-secondary">Muat Lebih Banyak</button>
@@ -119,9 +113,7 @@
   <section class="section" id="kreator">
     <div class="section-container">
       <h2 class="section-title">Kreator Unggulan</h2>
-      <div class="creators-grid" id="creatorsContainer">
-        <!-- Render 3 top creators via JS -->
-      </div>
+      <div class="creators-grid" id="creatorsContainer"></div>
     </div>
   </section>
 
@@ -265,9 +257,7 @@
           <!-- RELATED PROMPTS -->
           <div class="related-section">
             <h4 class="related-title">Prompt Terkait</h4>
-            <div class="related-grid" id="relatedPromptsGrid">
-              <!-- Render 3 related prompt cards -->
-            </div>
+            <div class="related-grid" id="relatedPromptsGrid"></div>
           </div>
 
         </div>
@@ -361,6 +351,8 @@
     </div>
   </div>
 
+  <!-- PEMUAT DATA AWAL & LOGIKA UTAMA -->
+  <script src="prompts-data.js"></script>
   <script src="script.js"></script>
 </body>
 </html>
