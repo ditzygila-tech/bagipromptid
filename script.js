@@ -3,12 +3,13 @@
 // FIREBASE CONFIGURATION
 // ============================================================
 const firebaseConfig = {
-  apiKey: "YOUR_API_KEY",
-  authDomain: "YOUR_AUTH_DOMAIN",
-  projectId: "YOUR_PROJECT_ID",
-  storageBucket: "YOUR_STORAGE_BUCKET",
-  messagingSenderId: "YOUR_MESSAGING_SENDER_ID",
-  appId: "YOUR_APP_ID"
+  apiKey: "AIzaSyAeaIWRMFWAaMZ7uDwBynhoG5ToSGwTb2s",
+  authDomain: "bagiprompt-b68ba.firebaseapp.com",
+  projectId: "bagiprompt-b68ba",
+  storageBucket: "bagiprompt-b68ba.firebasestorage.app",
+  messagingSenderId: "905297020074",
+  appId: "1:905297020074:web:74296ed233f4120a857cd3",
+  measurementId: "G-WFB5YNRJ3M"
 };
 
 // --- DATA SAMPLE MANDATORI ---
