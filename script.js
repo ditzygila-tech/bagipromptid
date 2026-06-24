@@ -7,6 +7,22 @@ const firebaseConfig = {
   appId: "1:905297020074:web:74296ed233f4120a857cd3",
   measurementId: "G-WFB5YNRJ3M"
 };
+function setLoadingState(button, isLoading) {
+  if (!button) return;
+
+  const btnText = button.querySelector(".btn-text");
+  const btnSpinner = button.querySelector(".btn-spinner");
+
+  button.disabled = isLoading;
+
+  if (btnText) {
+    btnText.classList.toggle("hidden", isLoading);
+  }
+
+  if (btnSpinner) {
+    btnSpinner.classList.toggle("hidden", !isLoading);
+  }
+}
 // ============================================================
 // FIREBASE REAL & REAL-TIME PLATFORM CORE ENGINE
 // ============================================================
