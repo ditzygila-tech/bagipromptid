@@ -972,4 +972,147 @@ function renderAnalytics(myPrompts) {
 // ADMIN PANEL ENGINE (REAL-TIME DATABASE MANAGEMENT)
 // ============================================================
 function initAdminPage() {
-  if
+  if (!currentUser || (currentUser.role !== "admin" && currentUser.role !== "moderator")) {
+    alert("Akses ditolak. Halaman dibatasi khusus Admin.");
+    window.location.href = "index.html";
+    return;
+  }
+
+  loadAdminStats();
+  renderActivityFeed();
+  renderAdminPrompts();
+  renderAdminUsers();
+  renderAdminSubscribers();
+  loadSiteSettings();
+}
+
+function renderAdminPrompts() {
+  const tbody = document.getElementById("adminPromptsTableBody");
+  if (!tbody) return;
+
+  tbody.innerHTML = db_prompts.map(p => {
+    const renderedImg = tempImageCache[p.id] || p.imageUrl;
+    return `
+      <tr>
+        <td><input type="checkbox" class="admin-prompt-select" value="${p.id}" onchange="checkBulkSelection()"></td>
+        <td><img src="${renderedImg}" alt="${p.title}" style="width:50px; height:35px; object-fit:cover; border-radius:4px;" onerror="handleImageError(this)"></td>
+        <td><strong>${p.title}</strong></td>
+        <td>${p.category}</td>
+        <td>${p.creatorName}</td>
+        <td>${p.uploadDate}</td>
+        <td><span class="status-badge active">${p.status}</span></td>
+        <td>
+          <div class="action-btn-group">
+            <button class="btn-table-action success" onclick="adminVerifyPrompt('${p.id}')">Verifikasi</button>
+            <button class="btn-table-action danger" onclick="adminDeletePrompt('${p.id}')">Hapus</button>
+          </div>
+        </td>
+      </tr>
+    `;
+  }).join("");
+}
+
+function adminVerifyPrompt(id) {
+  if (isRealFirebase) {
+    db.collection("prompts").doc(id).update({ isVerified: true })
+      .then(() => showToast("Prompt berhasil diverifikasi secara realtime."));
+  }
+}
+
+function adminDeletePrompt(id) {
+  showConfirmDialog("Hapus Permanen?", "Tindakan ini akan menghapus data di database awan secara permanen.", () => {
+    if (isRealFirebase) {
+      db.collection("prompts").doc(id).delete()
+        .then(() => showToast("Sukses menghapus data dari server."));
+    }
+  });
+}
+
+function renderAdminUsers() {
+  const tbody = document.getElementById("adminUsersTableBody");
+  if (!tbody) return;
+
+  db.collection("users").onSnapshot(snapshot => {
+    let users = [];
+    snapshot.forEach(doc => { users.push({ uid: doc.id, ...doc.data() }); });
+    tbody.innerHTML = users.map(u => `
+      <tr>
+        <td><strong>${u.displayName}</strong></td>
+        <td>${u.email}</td>
+        <td>${(u.role || "user").toUpperCase()}</td>
+        <td>${u.joinDate || "N/A"}</td>
+        <td>${u.promptCount || 0}</td>
+        <td><span class="status-badge active">Aktif</span></td>
+        <td>
+          <div class="action-btn-group">
+            <button class="btn-table-action" onclick="showToast('Fitur suspend siap dikonfigurasikan.')">Suspend</button>
+          </div>
+        </td>
+      </tr>
+    `).join("");
+  });
+}
+
+function renderAdminSubscribers() {
+  const tbody = document.getElementById("adminNewsletterTableBody");
+  if (!tbody) return;
+
+  db.collection("newsletters").onSnapshot(snapshot => {
+    let list = [];
+    snapshot.forEach(doc => { list.push({ id: doc.id, ...doc.data() }); });
+    if (list.length === 0) {
+      tbody.innerHTML = `<tr><td colspan="4" style="text-align:center; color:var(--color-text-muted);">Tidak ada pelanggan terdaftar.</td></tr>`;
+    } else {
+      tbody.innerHTML = list.map(s => `
+        <tr>
+          <td>${s.email}</td>
+          <td>24 Jun 2026</td>
+          <td><span class="status-badge active">${s.status || "Aktif"}</span></td>
+          <td>
+            <button class="btn-table-action danger" onclick="deleteSubscriber('${s.id}')">Hapus</button>
+          </td>
+        </tr>
+      `).join("");
+    }
+  });
+}
+
+function deleteSubscriber(id) {
+  if (isRealFirebase) {
+    db.collection("newsletters").doc(id).delete().then(() => showToast("Berhasil menghapus langganan."));
+  }
+}
+
+function loadSiteSettings() {
+  if (!isRealFirebase) return;
+  db.collection("siteSettings").doc("main").onSnapshot(doc => {
+    if (doc.exists) {
+      const data = doc.data();
+      document.getElementById("siteName").value = data.siteName || "";
+      document.getElementById("contactEmail").value = data.contactEmail || "";
+      document.getElementById("siteDesc").value = data.siteDesc || "";
+      document.getElementById("welcomeMsg").value = data.welcomeMsg || "";
+      document.getElementById("maxImgSize").value = data.maxImgSize || 2048;
+      document.getElementById("maintenanceMode").checked = data.maintenanceMode || false;
+      document.getElementById("registrationOpen").checked = data.registrationOpen || false;
+      document.getElementById("moderationEnabled").checked = data.moderationEnabled || false;
+    }
+  });
+}
+
+// ============================================================
+// MOBILE NAVBAR NAVIGATION TOGGLE & SCROLL DETECTOR
+// ============================================================
+const toggle = document.getElementById("menuToggle");
+const menu = document.getElementById("navMenu");
+if (toggle && menu) {
+  toggle.onclick = () => { menu.classList.toggle("active"); };
+}
+
+window.addEventListener("scroll", () => {
+  const navbar = document.getElementById("mainNavbar");
+  if (navbar) {
+    if (window.scrollY > 50) navbar.classList.add("scrolled");
+    else navbar.classList.remove("scrolled");
+  }
+});
