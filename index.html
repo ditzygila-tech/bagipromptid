@@ -1,0 +1,296 @@
+
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>bagiprompt.id - Koleksi Prompt AI Berkualitas</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Space+Grotesk:wght@500;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="style.css">
+  <!-- Firebase SDK Compat -->
+  <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-auth-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-storage-compat.js"></script>
+</head>
+<body>
+
+  <!-- NAVBAR -->
+  <nav class="navbar" id="mainNavbar">
+    <div class="nav-container">
+      <a href="index.html" class="logo">bagiprompt<span class="logo-accent">.id</span></a>
+      <button class="menu-toggle" id="menuToggle" aria-label="Buka Menu">
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="3" y1="12" x2="21" y2="12"></line><line x1="3" y1="6" x2="21" y2="6"></line><line x1="3" y1="18" x2="21" y2="18"></line></svg>
+      </button>
+      <div class="nav-menu" id="navMenu">
+        <a href="#jelajahi" class="nav-link">Jelajahi</a>
+        <a href="#trending" class="nav-link">Trending</a>
+        <a href="#tentang" class="nav-link">Tentang</a>
+        <a href="#komunitas" class="nav-link">Hubungi</a>
+        <div class="nav-cta-wrapper" id="navCtaArea">
+          <a href="login.html" class="btn-primary btn-nav">Masuk</a>
+        </div>
+      </div>
+    </div>
+  </nav>
+
+  <!-- HERO SECTION -->
+  <header class="hero">
+    <div class="hero-container">
+      <h1 class="hero-title">Koleksi Prompt AI Berkualitas</h1>
+      <p class="hero-subtitle">Temukan dan gunakan prompt terbaik untuk proyek kreatifmu</p>
+      
+      <div class="search-wrapper">
+        <div class="search-box">
+          <svg class="search-icon" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
+          <input type="text" id="searchInput" placeholder="Cari prompt berdasarkan judul, deskripsi, atau tag...">
+        </div>
+      </div>
+
+      <div class="live-counter" id="liveCounter">Memuat jumlah prompt...</div>
+
+      <div class="quick-filters" id="quickFilters">
+        <!-- JS akan menyuntikkan kategori populer di sini -->
+      </div>
+    </div>
+  </header>
+
+  <!-- TRENDING SECTION -->
+  <section class="section" id="trending">
+    <div class="section-container">
+      <h2 class="section-title">Prompt Trending Mingguan</h2>
+      <div class="trending-scroll-container" id="trendingContainer">
+        <!-- Render horizontal card di sini via JS -->
+      </div>
+    </div>
+  </section>
+
+  <!-- GALLERY SECTION -->
+  <main class="section" id="jelajahi">
+    <div class="section-container">
+      <h2 class="section-title">Jelajahi Pustaka Prompt</h2>
+      
+      <!-- CATEGORY TABS -->
+      <div class="category-tabs-container">
+        <div class="category-tabs" id="categoryTabs">
+          <button class="tab-btn active" data-category="Semua">Semua</button>
+          <button class="tab-btn" data-category="Midjourney">Midjourney</button>
+          <button class="tab-btn" data-category="DALL-E">DALL-E</button>
+          <button class="tab-btn" data-category="ChatGPT">ChatGPT</button>
+          <button class="tab-btn" data-category="Stable Diffusion">Stable Diffusion</button>
+          <button class="tab-btn" data-category="Copywriting">Copywriting</button>
+          <button class="tab-btn" data-category="Code">Code</button>
+          <button class="tab-btn" data-category="Design">Design</button>
+          <button class="tab-btn" data-category="Video">Video</button>
+          <button class="tab-btn" data-category="Marketing">Marketing</button>
+        </div>
+      </div>
+
+      <!-- SORT & FILTER BAR -->
+      <div class="sort-filter-bar">
+        <div class="results-count" id="resultsCount">Menampilkan...</div>
+        <div class="controls-group">
+          <select id="filterSelect" class="select-input">
+            <option value="Semua">Semua Tipe</option>
+            <option value="Gratis">Gratis</option>
+            <option value="Verified">Terverifikasi</option>
+          </select>
+          <select id="sortSelect" class="select-input">
+            <option value="Terbaru">Terbaru</option>
+            <option value="Terpopuler">Terpopuler</option>
+            <option value="Paling Banyak Disalin">Paling Banyak Disalin</option>
+          </select>
+        </div>
+      </div>
+
+      <!-- PROMPT GALLERY -->
+      <div class="prompt-grid" id="promptGallery">
+        <!-- Kartu prompt disuntikkan dinamis melalui JS -->
+      </div>
+
+      <div class="load-more-wrapper">
+        <button id="loadMoreBtn" class="btn-secondary">Muat Lebih Banyak</button>
+      </div>
+    </div>
+  </main>
+
+  <!-- KREATOR UNGGULAN -->
+  <section class="section" id="kreator">
+    <div class="section-container">
+      <h2 class="section-title">Kreator Unggulan</h2>
+      <div class="creators-grid" id="creatorsContainer">
+        <!-- Render 3 top creators via JS -->
+      </div>
+    </div>
+  </section>
+
+  <!-- TENTANG PLATFORM -->
+  <section class="section section-alt" id="tentang">
+    <div class="section-container">
+      <div class="about-grid">
+        <div class="about-text">
+          <h2 class="about-title">Tentang bagiprompt.id</h2>
+          <p class="about-p">bagiprompt.id adalah platform kolaboratif tempat para kreator, desainer, dan pengembang membagikan serta menemukan prompt AI berkualitas tinggi untuk berbagai kebutuhan kreatif maupun produktivitas.</p>
+          <p class="about-p">Misi kami adalah mendemokrasikan pemanfaatan kecerdasan buatan, memungkinkan siapa pun menghasilkan visual memukau, kode andal, maupun tulisan persuasif dengan panduan instruksi AI yang presisi.</p>
+        </div>
+        <div class="about-features">
+          <div class="feature-card">
+            <div class="feature-icon">
+              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path><polyline points="22 4 12 14.01 9 11.01"></polyline></svg>
+            </div>
+            <h3 class="feature-title">Koleksi Terkurasi</h3>
+            <p class="feature-desc">Seluruh prompt melalui proses verifikasi kualitas demi menjamin hasil eksekusi yang optimal.</p>
+          </div>
+          <div class="feature-card">
+            <div class="feature-icon">
+              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="7" width="20" height="14" rx="2" ry="2"></rect><path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16"></path></svg>
+            </div>
+            <h3 class="feature-title">Gratis Digunakan</h3>
+            <p class="feature-desc">Dapatkan akses ke ribuan instruksi siap guna tanpa dipungut biaya langganan apa pun.</p>
+          </div>
+          <div class="feature-card">
+            <div class="feature-icon">
+              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path><circle cx="9" cy="7" r="4"></circle><path d="M23 21v-2a4 4 0 0 0-3-3.87"></path><path d="M16 3.13a4 4 0 0 1 0 7.75"></path></svg>
+            </div>
+            <h3 class="feature-title">Komunitas Aktif</h3>
+            <p class="feature-desc">Berbagi kreasi secara langsung, bangun portofolio keahlian rekayasa prompt milik Anda.</p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- NEWSLETTER / HUBUNGI -->
+  <section class="section" id="komunitas">
+    <div class="section-container">
+      <div class="newsletter-card">
+        <h2 class="newsletter-title">Bergabung dengan Komunitas</h2>
+        <p class="newsletter-subtitle">Dapatkan kiriman kompilasi prompt AI terbaik dan tips terhangat langsung ke email Anda setiap minggu.</p>
+        <form class="newsletter-form" id="newsletterForm">
+          <input type="email" id="newsletterEmail" class="form-input" placeholder="Masukkan alamat email Anda" required>
+          <button type="submit" class="btn-primary" id="newsletterSubmitBtn">Daftar</button>
+        </form>
+      </div>
+    </div>
+  </section>
+
+  <!-- CTA BERBAGI PROMPT -->
+  <section class="section section-cta">
+    <div class="section-container cta-flex">
+      <div>
+        <h2 class="cta-title">Punya Prompt Berkualitas?</h2>
+        <p class="cta-desc">Bagikan kreasi instruksi orisinal Anda dan jadilah bagian dari pustaka pengetahuan AI terbesar di Indonesia.</p>
+      </div>
+      <div>
+        <a href="signup.html" class="btn-primary btn-large">Bagikan Prompt Mu</a>
+      </div>
+    </div>
+  </section>
+
+  <!-- FOOTER -->
+  <footer class="footer">
+    <div class="footer-container">
+      <div class="footer-brand">
+        <a href="index.html" class="logo">bagiprompt<span class="logo-accent">.id</span></a>
+        <p class="footer-tagline">Pusat kolaborasi, pembelajaran, serta berbagi instruksi AI bagi para inovator digital.</p>
+      </div>
+      <div class="footer-links-group">
+        <div class="footer-column">
+          <h4 class="footer-header">Tautan Cepat</h4>
+          <a href="#jelajahi" class="footer-link">Jelajahi</a>
+          <a href="#trending" class="footer-link">Trending</a>
+          <a href="#tentang" class="footer-link">Tentang Kami</a>
+        </div>
+        <div class="footer-column">
+          <h4 class="footer-header">Kontak</h4>
+          <span class="footer-info">hubungi@bagiprompt.id</span>
+          <span class="footer-info">Jakarta, Indonesia</span>
+        </div>
+      </div>
+    </div>
+    <div class="footer-bottom">
+      <p class="copyright-text">© 2026 bagiprompt.id. Semua hak dilindungi.</p>
+    </div>
+  </footer>
+
+  <!-- PROMPT DETAIL MODAL -->
+  <div class="modal-overlay" id="promptModal">
+    <div class="modal-card">
+      <button class="modal-close" id="modalCloseBtn" aria-label="Tutup Detail">
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+      </button>
+      <div class="modal-grid">
+        <div class="modal-left">
+          <img id="modalImage" src="https://placehold.co/600x400/e0e7ff/4F46E5?text=Prompt+Image" alt="Preview Visual">
+        </div>
+        <div class="modal-right">
+          <div class="modal-meta-header">
+            <span class="category-tag" id="modalCategory">Midjourney</span>
+            <span class="verified-badge" id="modalVerified">Terverifikasi</span>
+          </div>
+          <h2 class="modal-title" id="modalTitle">Kota Futuristik Malam Hari</h2>
+          <p class="modal-desc" id="modalDesc">Deskripsi detail mengenai cara pakai dan hasil visualisasi dari pengaplikasian prompt ini.</p>
+          
+          <div class="prompt-text-container">
+            <span class="container-label">Teks Prompt:</span>
+            <pre class="prompt-code-box"><code id="modalPromptText">Loading prompt...</code></pre>
+          </div>
+
+          <div class="modal-actions">
+            <button class="btn-primary" id="btnSalinPrompt">Salin Prompt</button>
+            <button class="btn-secondary" id="btnSimpanKoleksi">Simpan ke Koleksi</button>
+          </div>
+
+          <div class="share-group">
+            <span class="share-label">Bagikan:</span>
+            <button class="btn-share-icon" id="shareCopyLink" title="Salin Tautan">Tautan</button>
+            <button class="btn-share-icon" id="shareTwitter" title="Bagikan ke Twitter">Twitter</button>
+            <button class="btn-share-icon" id="shareWA" title="Bagikan ke WhatsApp">WhatsApp</button>
+          </div>
+
+          <div class="modal-creator-profile">
+            <div class="creator-avatar" id="modalCreatorAvatar">JD</div>
+            <div class="creator-info">
+              <div class="creator-name" id="modalCreatorName">John Doe</div>
+              <div class="upload-date" id="modalUploadDate">Diunggah pada 12 Jan 2026</div>
+            </div>
+          </div>
+
+          <div class="modal-stats-footer">
+            <span id="modalViews">Dilihat: 0</span>
+            <span id="modalCopies">Disalin: 0</span>
+          </div>
+
+          <!-- RELATED PROMPTS -->
+          <div class="related-section">
+            <h4 class="related-title">Prompt Terkait</h4>
+            <div class="related-grid" id="relatedPromptsGrid">
+              <!-- Render 3 related prompt cards -->
+            </div>
+          </div>
+
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- TOAST NOTIFICATION -->
+  <div id="toast" class="toast-notification">Pemberitahuan muncul di sini</div>
+
+  <!-- CONFIRM DIALOG -->
+  <div class="confirm-overlay" id="confirmDialog">
+    <div class="confirm-card">
+      <h3 class="confirm-title" id="confirmTitle">Konfirmasi Tindakan</h3>
+      <p class="confirm-desc" id="confirmDesc">Apakah Anda yakin ingin melakukan tindakan ini?</p>
+      <div class="confirm-actions">
+        <button class="btn-secondary" id="confirmCancelBtn">Batal</button>
+        <button class="btn-danger" id="confirmYesBtn">Ya, Lanjutkan</button>
+      </div>
+    </div>
+  </div>
+
+  <script src="script.js"></script>
+</body>
+</html>

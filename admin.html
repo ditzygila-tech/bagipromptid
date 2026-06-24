@@ -1,0 +1,363 @@
+
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Admin Dashboard - bagiprompt.id</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Space+Grotesk:wght@500;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="style.css">
+  <link rel="stylesheet" href="admin.css">
+  <!-- Firebase SDK Compat -->
+  <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-auth-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore-compat.js"></script>
+</head>
+<body class="body-admin">
+
+  <div class="admin-layout">
+    <!-- SIDEBAR -->
+    <aside class="admin-sidebar">
+      <div class="sidebar-header">
+        <a href="index.html" class="logo">bagiprompt<span class="logo-accent">.id</span></a>
+        <span class="admin-badge">Admin Panel</span>
+      </div>
+      
+      <nav class="sidebar-menu">
+        <button class="menu-item active" onclick="switchAdminSection('overview')">Ringkasan</button>
+        <button class="menu-item" onclick="switchAdminSection('prompts')">Kelola Prompt</button>
+        <button class="menu-item" onclick="switchAdminSection('users')">Kelola Pengguna</button>
+        <button class="menu-item" onclick="switchAdminSection('reports')">Komentar & Laporan</button>
+        <button class="menu-item" onclick="switchAdminSection('categories')">Kategori</button>
+        <button class="menu-item" onclick="switchAdminSection('newsletter')">Newsletter</button>
+        <button class="menu-item" onclick="switchAdminSection('settings')">Pengaturan Situs</button>
+      </nav>
+
+      <div class="sidebar-footer">
+        <button class="btn-logout-sidebar" onclick="handleLogout()">Keluar</button>
+      </div>
+    </aside>
+
+    <!-- MAIN AREA -->
+    <main class="admin-content-area">
+      
+      <!-- SECTION 1: OVERVIEW -->
+      <section class="admin-section active" id="adminSecOverview">
+        <h1 class="admin-title">Dashboard Ringkasan</h1>
+        
+        <div class="stats-grid-4">
+          <div class="admin-stat-card glass-card">
+            <div class="card-title">Total Prompt</div>
+            <div class="card-value" id="adminStatTotalPrompts">0</div>
+          </div>
+          <div class="admin-stat-card glass-card">
+            <div class="card-title">Total Pengguna</div>
+            <div class="card-value" id="adminStatTotalUsers">0</div>
+          </div>
+          <div class="admin-stat-card glass-card">
+            <div class="card-title">Views Hari Ini</div>
+            <div class="card-value" id="adminStatViewsToday">0</div>
+          </div>
+          <div class="admin-stat-card glass-card border-warning">
+            <div class="card-title color-warning">Menunggu Review</div>
+            <div class="card-value color-warning" id="adminStatPendingPrompts">0</div>
+          </div>
+        </div>
+
+        <div class="overview-grid mt-6">
+          <div class="feed-container glass-card">
+            <h3 class="feed-title">Aktivitas Terbaru</h3>
+            <ul class="activity-feed-list" id="activityFeed">
+              <!-- Render daftar feed aktivitas -->
+            </ul>
+          </div>
+          
+          <div class="quick-actions-box glass-card">
+            <h3 class="feed-title">Aksi Cepat</h3>
+            <div class="button-list">
+              <button class="btn-primary" onclick="switchAdminSection('prompts')">Tinjau Prompt Baru</button>
+              <button class="btn-secondary" onclick="switchAdminSection('reports')">Lihat Laporan Pelanggaran</button>
+            </div>
+            <div class="platform-health-metrics">
+              <div class="health-item">
+                <span>Penyimpanan Media</span>
+                <span id="healthStorage">Maks 5GB</span>
+              </div>
+              <div class="health-item">
+                <span>Email Terlanggan</span>
+                <span id="healthSubscribers">0 Sub</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- SECTION 2: KELOLA PROMPT -->
+      <section class="admin-section" id="adminSecPrompts">
+        <h1 class="admin-title">Manajemen Prompt</h1>
+        
+        <div class="admin-tabs-nav">
+          <button class="admin-tab-item active" onclick="filterAdminPrompts('Semua')">Semua</button>
+          <button class="admin-tab-item" onclick="filterAdminPrompts('Menunggu Review')">Menunggu Review</button>
+          <button class="admin-tab-item" onclick="filterAdminPrompts('Aktif')">Aktif</button>
+          <button class="admin-tab-item" onclick="filterAdminPrompts('Tersembunyi')">Tersembunyi</button>
+          <button class="admin-tab-item" onclick="filterAdminPrompts('Dilaporkan')">Dilaporkan</button>
+        </div>
+
+        <div class="admin-search-row">
+          <input type="text" id="adminSearchPromptInput" class="form-input" placeholder="Cari prompt berdasarkan judul atau kreator...">
+        </div>
+
+        <div class="bulk-actions-bar hidden" id="bulkActionsBar">
+          <span id="bulkSelectedText">0 baris terpilih</span>
+          <div class="bulk-btn-group">
+            <button class="btn-small btn-success" onclick="handleBulkAction('approve')">Setujui Masal</button>
+            <button class="btn-small btn-secondary" onclick="handleBulkAction('hide')">Sembunyikan Masal</button>
+            <button class="btn-small btn-danger" onclick="handleBulkAction('delete')">Hapus Masal</button>
+          </div>
+        </div>
+
+        <div class="table-container glass-card">
+          <table class="data-table">
+            <thead>
+              <tr>
+                <th width="40"><input type="checkbox" id="selectAllPrompts" onchange="toggleSelectAllPrompts(this)"></th>
+                <th>Gambar</th>
+                <th>Judul Prompt</th>
+                <th>Kategori</th>
+                <th>Kreator</th>
+                <th>Tanggal</th>
+                <th>Status</th>
+                <th>Aksi</th>
+              </tr>
+            </thead>
+            <tbody id="adminPromptsTableBody">
+              <!-- Render daftar prompt -->
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <!-- SECTION 3: KELOLA PENGGUNA -->
+      <section class="admin-section" id="adminSecUsers">
+        <h1 class="admin-title">Manajemen Pengguna</h1>
+        
+        <div class="admin-search-row">
+          <input type="text" id="adminSearchUserInput" class="form-input" placeholder="Cari berdasarkan nama atau email...">
+          <select id="adminUserRoleFilter" class="select-input" onchange="filterAdminUsers()">
+            <option value="Semua">Semua Role</option>
+            <option value="admin">Admin</option>
+            <option value="moderator">Moderator</option>
+            <option value="user">User</option>
+            <option value="suspended">Suspended</option>
+          </select>
+        </div>
+
+        <div class="table-container glass-card">
+          <table class="data-table">
+            <thead>
+              <tr>
+                <th>Nama</th>
+                <th>Email</th>
+                <th>Role</th>
+                <th>Tanggal Daftar</th>
+                <th>Jumlah Prompt</th>
+                <th>Status</th>
+                <th>Aksi</th>
+              </tr>
+            </thead>
+            <tbody id="adminUsersTableBody">
+              <!-- Render daftar user -->
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <!-- SECTION 4: KOMENTAR & LAPORAN -->
+      <section class="admin-section" id="adminSecReports">
+        <h1 class="admin-title">Laporan & Pelanggaran</h1>
+        <div class="table-container glass-card">
+          <table class="data-table">
+            <thead>
+              <tr>
+                <th>Prompt Dilaporkan</th>
+                <th>Pelapor</th>
+                <th>Alasan</th>
+                <th>Tanggal</th>
+                <th>Status</th>
+                <th>Aksi</th>
+              </tr>
+            </thead>
+            <tbody id="adminReportsTableBody">
+              <!-- Render data laporan -->
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <!-- SECTION 5: KATEGORI -->
+      <section class="admin-section" id="adminSecCategories">
+        <div class="section-actions-row">
+          <h1 class="admin-title">Manajemen Kategori</h1>
+          <button class="btn-primary" onclick="openAddCategoryModal()">Tambah Kategori Baru</button>
+        </div>
+
+        <div class="category-dashboard-grid mt-6">
+          <div class="table-container glass-card">
+            <table class="data-table">
+              <thead>
+                <tr>
+                  <th>Urutan</th>
+                  <th>Nama Kategori</th>
+                  <th>Warna Representasi</th>
+                  <th>Jumlah Prompt</th>
+                  <th>Aksi</th>
+                </tr>
+              </thead>
+              <tbody id="adminCategoriesTableBody">
+                <!-- Render baris kategori -->
+              </tbody>
+            </table>
+          </div>
+
+          <div class="glass-card" id="categoryFormWrapper">
+            <h3 class="feed-title" id="catFormHeader">Tambah Kategori</h3>
+            <form id="adminCategoryForm" onsubmit="handleCategorySubmit(event)">
+              <input type="hidden" id="categoryEditId" value="">
+              <div class="form-group">
+                <label class="form-label" for="catNameInput">Nama Kategori</label>
+                <input type="text" id="catNameInput" class="form-input" required placeholder="Contoh: Desain Grafis">
+              </div>
+              <div class="form-group">
+                <label class="form-label" for="catColorInput">Warna Tag</label>
+                <input type="color" id="catColorInput" class="form-input" style="height:44px;" value="#4F46E5">
+              </div>
+              <div class="form-group">
+                <label class="form-label" for="catIconInput">Ikon (Label/SVG)</label>
+                <input type="text" id="catIconInput" class="form-input" placeholder="Misal: code atau edit">
+              </div>
+              <button type="submit" class="btn-primary" id="btnSubmitCategory">Simpan</button>
+            </form>
+          </div>
+        </div>
+      </section>
+
+      <!-- SECTION 6: NEWSLETTER -->
+      <section class="admin-section" id="adminSecNewsletter">
+        <div class="section-actions-row">
+          <h1 class="admin-title">Manajemen Langganan Newsletter</h1>
+          <button class="btn-secondary" onclick="exportNewsletterCSV()">Ekspor CSV</button>
+        </div>
+
+        <div class="newsletter-management-grid mt-6">
+          <div class="table-container glass-card">
+            <table class="data-table">
+              <thead>
+                <tr>
+                  <th>Email</th>
+                  <th>Tanggal Daftar</th>
+                  <th>Status</th>
+                  <th>Aksi</th>
+                </tr>
+              </thead>
+              <tbody id="adminNewsletterTableBody">
+                <!-- Render baris subscriber -->
+              </tbody>
+            </table>
+          </div>
+
+          <div class="glass-card">
+            <h3 class="feed-title">Kirim Siaran Email (Broadcast)</h3>
+            <form id="adminBroadcastForm" onsubmit="handleBroadcastSubmit(event)">
+              <div class="form-group">
+                <label class="form-label" for="broadcastSubject">Subjek Email</label>
+                <input type="text" id="broadcastSubject" class="form-input" placeholder="Koleksi Prompt Unggulan Pekan Ini" required>
+              </div>
+              <div class="form-group">
+                <label class="form-label" for="broadcastMessage">Isi Pesan</label>
+                <textarea id="broadcastMessage" class="form-input" style="min-height:180px;" placeholder="Tulis pesan markdown atau teks biasa..." required></textarea>
+              </div>
+              <button type="submit" class="btn-primary" id="btnSendBroadcast">
+                <span class="btn-text">Kirim ke Semua Pelanggan</span>
+                <span class="btn-spinner hidden"></span>
+              </button>
+            </form>
+          </div>
+        </div>
+      </section>
+
+      <!-- SECTION 7: PENGATURAN SITUS -->
+      <section class="admin-section" id="adminSecSettings">
+        <h1 class="admin-title">Pengaturan Sistem Situs</h1>
+        
+        <form class="dashboard-form glass-card mt-6" id="adminSiteSettingsForm" onsubmit="handleSiteSettingsSubmit(event)">
+          <div class="form-grid">
+            <div class="form-group">
+              <label class="form-label" for="siteName">Nama Platform</label>
+              <input type="text" id="siteName" class="form-input" required>
+            </div>
+            <div class="form-group">
+              <label class="form-label" for="contactEmail">Email Hubungi Kami</label>
+              <input type="email" id="contactEmail" class="form-input" required>
+            </div>
+          </div>
+
+          <div class="form-group">
+            <label class="form-label" for="siteDesc">Deskripsi Platform</label>
+            <input type="text" id="siteDesc" class="form-input" required>
+          </div>
+
+          <div class="form-group">
+            <label class="form-label" for="welcomeMsg">Pesan Selamat Datang Hero</label>
+            <textarea id="welcomeMsg" class="form-input" required></textarea>
+          </div>
+
+          <div class="form-grid">
+            <div class="form-group">
+              <label class="form-label" for="maxImgSize">Ukuran Maks Gambar Upload (KB)</label>
+              <input type="number" id="maxImgSize" class="form-input" required>
+            </div>
+            <div class="form-group">
+              <label class="form-label">Konfigurasi Akses</label>
+              <div class="checkbox-group mt-3">
+                <input type="checkbox" id="maintenanceMode">
+                <label for="maintenanceMode" class="checkbox-label">Mode Pemeliharaan (Maintenance Mode)</label>
+              </div>
+              <div class="checkbox-group mt-3">
+                <input type="checkbox" id="registrationOpen" checked>
+                <label for="registrationOpen" class="checkbox-label">Buka Pendaftaran Anggota Baru</label>
+              </div>
+              <div class="checkbox-group mt-3">
+                <input type="checkbox" id="moderationEnabled">
+                <label for="moderationEnabled" class="checkbox-label">Wajibkan Verifikasi Admin Sebelum Rilis</label>
+              </div>
+            </div>
+          </div>
+
+          <button type="submit" class="btn-primary" id="btnSaveSiteSettings">Simpan Perubahan Sistem</button>
+        </form>
+      </section>
+
+    </main>
+  </div>
+
+  <!-- CONFIRM DIALOG -->
+  <div class="confirm-overlay" id="confirmDialog">
+    <div class="confirm-card">
+      <h3 class="confirm-title" id="confirmTitle">Konfirmasi Tindakan</h3>
+      <p class="confirm-desc" id="confirmDesc">Apakah Anda yakin ingin melakukan tindakan ini?</p>
+      <div class="confirm-actions">
+        <button class="btn-secondary" id="confirmCancelBtn">Batal</button>
+        <button class="btn-danger" id="confirmYesBtn">Ya, Lanjutkan</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- TOAST NOTIFICATION -->
+  <div id="toast" class="toast-notification">Pemberitahuan muncul di sini</div>
+
+  <script src="script.js"></script>
+</body>
+</html>

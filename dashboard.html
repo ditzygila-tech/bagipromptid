@@ -1,0 +1,277 @@
+
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Dashboard Kreator - bagiprompt.id</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Space+Grotesk:wght@500;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="style.css">
+  <!-- Firebase SDK Compat -->
+  <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-auth-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-storage-compat.js"></script>
+</head>
+<body class="body-dashboard">
+
+  <!-- DASHBOARD NAVBAR -->
+  <nav class="navbar main-dashboard-nav">
+    <div class="nav-container">
+      <a href="index.html" class="logo">bagiprompt<span class="logo-accent">.id</span></a>
+      <div class="user-menu-wrapper">
+        <div class="user-profile-badge" id="navUserBadge" onclick="toggleUserDropdown()">
+          <span id="userInitials">K</span>
+          <div class="user-dropdown-card hidden" id="userDropdown">
+            <div class="user-dropdown-header">
+              <span class="dropdown-name" id="dropdownUserName">Kreator Aktif</span>
+              <span class="dropdown-email" id="dropdownUserEmail">kreator@bagiprompt.id</span>
+            </div>
+            <div class="dropdown-divider"></div>
+            <button class="dropdown-item" onclick="switchDashboardTab('settings')">Pengaturan</button>
+            <button class="dropdown-item color-danger" onclick="handleLogout()">Keluar</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </nav>
+
+  <!-- DASHBOARD CONTENT -->
+  <main class="dashboard-main-container">
+    <div class="welcome-banner">
+      <h1 class="welcome-title" id="welcomeMessageText">Selamat datang, Kreator</h1>
+      <p class="welcome-desc">Kelola prompt kreasi Anda, analisis kinerja, dan kembangkan pengikut Anda.</p>
+    </div>
+
+    <!-- METRICS GRID -->
+    <div class="metrics-grid">
+      <div class="metric-card glass-card">
+        <span class="metric-label">Total Prompt</span>
+        <span class="metric-value" id="statTotalPrompts">0</span>
+      </div>
+      <div class="metric-card glass-card">
+        <span class="metric-label">Total Dilihat</span>
+        <span class="metric-value" id="statTotalViews">0</span>
+      </div>
+      <div class="metric-card glass-card">
+        <span class="metric-label">Total Disalin</span>
+        <span class="metric-value" id="statTotalCopies">0</span>
+      </div>
+      <div class="metric-card glass-card">
+        <span class="metric-label">Prompt Aktif</span>
+        <span class="metric-value" id="statActivePrompts">0</span>
+      </div>
+    </div>
+
+    <!-- NAVIGATION TABS -->
+    <div class="dashboard-tabs-container">
+      <div class="dashboard-tabs">
+        <button class="dash-tab-btn active" onclick="switchDashboardTab('prompts')">Prompt Ku</button>
+        <button class="dash-tab-btn" onclick="switchDashboardTab('saved')">Koleksi Tersimpan</button>
+        <button class="dash-tab-btn" id="btnTabCreatePrompt" onclick="switchDashboardTab('create')">Buat Prompt Baru</button>
+        <button class="dash-tab-btn" onclick="switchDashboardTab('analytics')">Analitik</button>
+        <button class="dash-tab-btn" onclick="switchDashboardTab('settings')">Pengaturan</button>
+      </div>
+    </div>
+
+    <!-- TAB 1: PROMPT KU -->
+    <section class="dashboard-section tab-panel active" id="tabPanelPrompts">
+      <div class="section-actions-row">
+        <h2 class="dashboard-sub-title">Daftar Prompt Saya</h2>
+        <button class="btn-primary" onclick="switchDashboardTab('create')">Tambah Baru</button>
+      </div>
+      <div class="dashboard-list-grid" id="myPromptsGrid">
+        <!-- Render prompt buatan sendiri di sini -->
+      </div>
+    </section>
+
+    <!-- TAB 2: KOLEKSI TERSIMPAN -->
+    <section class="dashboard-section tab-panel" id="tabPanelSaved">
+      <h2 class="dashboard-sub-title">Prompt yang Disimpan</h2>
+      <div class="dashboard-list-grid" id="savedPromptsGrid">
+        <!-- Render saved prompts -->
+      </div>
+    </section>
+
+    <!-- TAB 3: BUAT PROMPT BARU -->
+    <section class="dashboard-section tab-panel" id="tabPanelCreate">
+      <h2 class="dashboard-sub-title" id="formPromptTitleHeader">Buat Prompt Baru</h2>
+      <form class="dashboard-form" id="createPromptForm" onsubmit="handlePromptSubmit(event)">
+        <input type="hidden" id="editPromptId" value="">
+        
+        <div class="form-grid">
+          <div class="form-group">
+            <label class="form-label" for="promptTitleInput">Judul Prompt</label>
+            <input type="text" id="promptTitleInput" class="form-input" placeholder="Contoh: Portrait Cyberpunk Realistis" required>
+          </div>
+          <div class="form-group">
+            <label class="form-label" for="promptCategorySelect">Kategori</label>
+            <select id="promptCategorySelect" class="select-input" required>
+              <option value="Midjourney">Midjourney</option>
+              <option value="DALL-E">DALL-E</option>
+              <option value="ChatGPT">ChatGPT</option>
+              <option value="Stable Diffusion">Stable Diffusion</option>
+              <option value="Copywriting">Copywriting</option>
+              <option value="Code">Code</option>
+              <option value="Design">Design</option>
+              <option value="Video">Video</option>
+              <option value="Marketing">Marketing</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label class="form-label" for="promptDescInput">Deskripsi</label>
+          <input type="text" id="promptDescInput" class="form-input" placeholder="Fungsi utama atau efek yang dihasilkan dari prompt ini" required>
+        </div>
+
+        <div class="form-group">
+          <label class="form-label" for="promptTextInput">Teks Prompt Utama</label>
+          <textarea id="promptTextInput" class="form-input textarea-code" placeholder="Tuliskan teks panduan/instruksi prompt orisinal Anda..." required></textarea>
+        </div>
+
+        <div class="form-grid-file">
+          <div class="form-group">
+            <label class="form-label">Gambar Sampul</label>
+            <div class="file-upload-box">
+              <input type="file" id="promptImgInput" accept="image/*" onchange="previewUploadImage(this)">
+              <div class="upload-placeholder" id="uploadPlaceholder">
+                <span>Pilih berkas gambar JPG/PNG</span>
+              </div>
+            </div>
+          </div>
+          <div class="form-group flex-center-content">
+            <img id="uploadImgPreview" class="upload-preview-img hidden" src="" alt="Preview">
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label class="form-label" for="promptTagsInput">Tags (Pisahkan dengan tanda koma)</label>
+          <input type="text" id="promptTagsInput" class="form-input" placeholder="cyberpunk, neon, realistic, visual">
+        </div>
+
+        <div class="checkbox-group">
+          <input type="checkbox" id="promptPublishCheckbox" checked>
+          <label for="promptPublishCheckbox" class="checkbox-label">Publikasikan secara instan ke galeri publik</label>
+        </div>
+
+        <div class="form-actions-footer">
+          <button type="button" class="btn-secondary" onclick="switchDashboardTab('prompts')">Batal</button>
+          <button type="submit" id="btnSubmitPrompt" class="btn-primary">
+            <span class="btn-text">Simpan & Publikasikan</span>
+            <span class="btn-spinner hidden"></span>
+          </button>
+        </div>
+      </form>
+    </section>
+
+    <!-- TAB 4: ANALITIK -->
+    <section class="dashboard-section tab-panel" id="tabPanelAnalytics">
+      <h2 class="dashboard-sub-title">Performa Akumulasi Prompt</h2>
+      
+      <!-- SIMPLE BAR CHART MOCK -->
+      <div class="analytics-chart-wrapper glass-card">
+        <h4 class="chart-header">Distribusi View Prompt Unggulan (Top 5)</h4>
+        <div class="bar-chart" id="analyticsBarChart">
+          <!-- Render diagram batang murni CSS -->
+        </div>
+        <div class="chart-footer-note">Data diambil dalam kurun waktu 30 hari terakhir</div>
+      </div>
+
+      <div class="analytics-table-wrapper glass-card">
+        <table class="data-table">
+          <thead>
+            <tr>
+              <th>Judul Prompt</th>
+              <th>Kategori</th>
+              <th>Dilihat</th>
+              <th>Disalin</th>
+              <th>Tanggal Rilis</th>
+              <th>Status</th>
+            </tr>
+          </thead>
+          <tbody id="analyticsTableBody">
+            <!-- Data baris analytics disuntikkan via JS -->
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <!-- TAB 5: PENGATURAN -->
+    <section class="dashboard-section tab-panel" id="tabPanelSettings">
+      <h2 class="dashboard-sub-title">Pengaturan Profil & Keamanan</h2>
+      
+      <div class="settings-grid">
+        <form class="dashboard-form glass-card" id="profileSettingsForm" onsubmit="handleProfileUpdate(event)">
+          <h3 class="settings-group-title">Detail Profil</h3>
+          <div class="form-group">
+            <label class="form-label" for="settingsName">Nama Tampilan</label>
+            <input type="text" id="settingsName" class="form-input" required>
+          </div>
+          <div class="form-group">
+            <label class="form-label" for="settingsBio">Bio Ringkas</label>
+            <input type="text" id="settingsBio" class="form-input" placeholder="Ceritakan keahlian rekayasa prompt Anda">
+          </div>
+          <div class="form-group">
+            <label class="form-label" for="settingsWebsite">Situs Web / Portofolio</label>
+            <input type="url" id="settingsWebsite" class="form-input" placeholder="https://portofolio.com">
+          </div>
+          <button type="submit" class="btn-primary" id="btnSaveProfile">Simpan Profil</button>
+        </form>
+
+        <form class="dashboard-form glass-card" id="passwordSettingsForm" onsubmit="handlePasswordUpdate(event)">
+          <h3 class="settings-group-title">Ubah Kata Sandi</h3>
+          <div class="form-group">
+            <label class="form-label" for="settingsOldPassword">Kata Sandi Lama</label>
+            <input type="password" id="settingsOldPassword" class="form-input" required>
+          </div>
+          <div class="form-group">
+            <label class="form-label" for="settingsNewPassword">Kata Sandi Baru</label>
+            <input type="password" id="settingsNewPassword" class="form-input" required>
+          </div>
+          <button type="submit" class="btn-primary" id="btnSavePassword">Perbarui Kata Sandi</button>
+        </form>
+      </div>
+
+      <div class="settings-notif-box glass-card mt-6">
+        <h3 class="settings-group-title">Preferensi Notifikasi</h3>
+        <div class="checkbox-group mb-3">
+          <input type="checkbox" id="notifComment" checked>
+          <label for="notifComment" class="checkbox-label">Kirim email notifikasi jika ada komentar baru</label>
+        </div>
+        <div class="checkbox-group mb-3">
+          <input type="checkbox" id="notifFollower" checked>
+          <label for="notifFollower" class="checkbox-label">Kirim email pemberitahuan followers baru</label>
+        </div>
+        <button type="button" class="btn-secondary" onclick="saveNotificationPrefs()">Simpan Preferensi</button>
+      </div>
+
+      <div class="danger-zone-box glass-card mt-6">
+        <h3 class="danger-zone-title">Zona Berbahaya</h3>
+        <p class="danger-zone-desc">Menghapus akun Anda akan menghapus seluruh data portofolio prompt secara permanen dan tidak dapat dibatalkan.</p>
+        <button type="button" class="btn-danger" onclick="handleAccountDeletion()">Hapus Akun Permanen</button>
+      </div>
+    </section>
+
+  </main>
+
+  <!-- CONFIRM DIALOG -->
+  <div class="confirm-overlay" id="confirmDialog">
+    <div class="confirm-card">
+      <h3 class="confirm-title" id="confirmTitle">Konfirmasi Tindakan</h3>
+      <p class="confirm-desc" id="confirmDesc">Apakah Anda yakin ingin melanjutkan tindakan ini?</p>
+      <div class="confirm-actions">
+        <button class="btn-secondary" id="confirmCancelBtn">Batal</button>
+        <button class="btn-danger" id="confirmYesBtn">Ya, Lanjutkan</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- TOAST NOTIFICATION -->
+  <div id="toast" class="toast-notification">Pemberitahuan muncul di sini</div>
+
+  <script src="script.js"></script>
+</body>
+</html>
