@@ -1,3 +1,12 @@
+const firebaseConfig = {
+  apiKey: "AIzaSyAeaIWRMFWAaMZ7uDwBynhoG5ToSGwTb2s",
+  authDomain: "bagiprompt-b68ba.firebaseapp.com",
+  projectId: "bagiprompt-b68ba",
+  storageBucket: "bagiprompt-b68ba.firebasestorage.app",
+  messagingSenderId: "905297020074",
+  appId: "1:905297020074:web:74296ed233f4120a857cd3",
+  measurementId: "G-WFB5YNRJ3M"
+};
 // ============================================================
 // FIREBASE REAL & REAL-TIME PLATFORM CORE ENGINE
 // ============================================================
