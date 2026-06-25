@@ -1,3 +1,6 @@
+// ============================================================
+// FIREBASE REAL & REAL-TIME PLATFORM CORE ENGINE (V10 COMPAT)
+// ============================================================
 const firebaseConfig = {
   apiKey: "AIzaSyAeaIWRMFWAaMZ7uDwBynhoG5ToSGwTb2s",
   authDomain: "bagiprompt-b68ba.firebaseapp.com",
@@ -7,27 +10,7 @@ const firebaseConfig = {
   appId: "1:905297020074:web:74296ed233f4120a857cd3",
   measurementId: "G-WFB5YNRJ3M"
 };
-function setLoadingState(button, isLoading) {
-  if (!button) return;
 
-  const btnText = button.querySelector(".btn-text");
-  const btnSpinner = button.querySelector(".btn-spinner");
-
-  button.disabled = isLoading;
-
-  if (btnText) {
-    btnText.classList.toggle("hidden", isLoading);
-  }
-
-  if (btnSpinner) {
-    btnSpinner.classList.toggle("hidden", !isLoading);
-  }
-}
-// ============================================================
-// FIREBASE REAL & REAL-TIME PLATFORM CORE ENGINE
-// ============================================================
-
-// Deteksi Inisialisasi Firebase Nyata
 let auth = null;
 let db = null;
 let storage = null;
@@ -41,34 +24,43 @@ if (firebaseConfig.apiKey !== "YOUR_API_KEY") {
     storage = firebase.storage();
     isRealFirebase = true;
   } catch (e) {
-    console.error("Kesalahan kritis konfigurasi Firebase: ", e);
+    console.error("Inisialisasi SDK Firebase terhambat. Pastikan parameter konfigurasi Anda valid.", e);
   }
 }
 
-// State Global Ter-sinkronisasi
+// State Global Sinkron Real-Time
 let currentUser = null;
-let db_prompts = []; // Disinkronkan realtime dari Firestore
+let db_prompts = []; 
 let activeCategory = "Semua";
 let currentSearch = "";
 let currentFilter = "Semua";
 let currentSort = "Terbaru";
 let visiblePromptsCount = 6;
 
-// Cache gambar sesi lokal (Base64/ObjectURL) agar langsung tampil sebelum di-sync server fisik
+// Cache Memori Sesi (Mencegah patah visual saat proses unggah asinkron berjalan)
 let tempImageCache = {};
 
+// Memulihkan Cache Gambar Base64 Lokal (Jika Ada)
+for (let i = 0; i < localStorage.length; i++) {
+  const key = localStorage.key(i);
+  if (key.startsWith("cache_img_")) {
+    const promptId = key.replace("cache_img_", "");
+    tempImageCache[promptId] = localStorage.getItem(key);
+  }
+}
+
 // ============================================================
-// SISTEM SEEDING OTOMATIS (FIRST RUN IN PRODUCTION)
+// AUTO-SEEDING INTEGRATION (FIRST LAUNCH SETUP)
 // ============================================================
 function seedInitialData() {
   if (!isRealFirebase) return;
   if (typeof SAMPLE_PROMPTS === "undefined" || !SAMPLE_PROMPTS.length) return;
   
-  showToast("Menginisialisasi basis data sampel di Cloud Firestore...");
-  let batch = db.batch();
+  showToast("Menginisialisasi struktur basis data sampel pertama kali...");
+  const batch = db.batch();
   
   SAMPLE_PROMPTS.forEach(p => {
-    let docRef = db.collection("prompts").doc(p.id);
+    const docRef = db.collection("prompts").doc(p.id);
     batch.set(docRef, {
       title: p.title,
       category: p.category,
@@ -88,15 +80,15 @@ function seedInitialData() {
   });
 
   batch.commit()
-    .then(() => { showToast("Selesai memigrasikan pustaka data sampel pertama."); })
-    .catch(err => { console.error("Migrasi awal Firestore gagal: ", err); });
+    .then(() => { showToast("Migrasi basis data sampel Firestore berhasil."); })
+    .catch(err => { console.error("Proses migrasi Firestore gagal: ", err); });
 }
 
 // ============================================================
-// INITIALIZATION & REAL-TIME SYNC READERS
+// SYSTEM AUTHENTICATION & DIRECT SYNC READERS
 // ============================================================
 if (isRealFirebase) {
-  // 1. Sinkronisasi Autentikasi Pengguna
+  // 1. Sinkronisasi Sesi Autentikasi Anggota
   auth.onAuthStateChanged(user => {
     if (user) {
       db.collection("users").doc(user.uid).onSnapshot(doc => {
@@ -107,6 +99,8 @@ if (isRealFirebase) {
         }
         updateNavCta();
         runPageSpecificInit();
+      }, err => {
+        console.error("Gagal melakukan sinkronisasi profil: ", err);
       });
     } else {
       currentUser = null;
@@ -115,21 +109,20 @@ if (isRealFirebase) {
     }
   });
 
-  // 2. Sinkronisasi Data Prompt Utama Secara Real-time (Seketika)
+  // 2. Real-Time Monitor Koleksi Prompt Utama (onSnapshot)
   db.collection("prompts").onSnapshot(snapshot => {
     db_prompts = [];
     snapshot.forEach(doc => {
       db_prompts.push({ id: doc.id, ...doc.data() });
     });
 
-    // Jalankan seeding otomatis jika koleksi database kosong di server awan Anda
     if (db_prompts.length === 0) {
       seedInitialData();
     } else {
       const path = window.location.pathname;
       const page = path.substring(path.lastIndexOf("/") + 1);
       
-      // Update visual komponen yang bergantung pada real-time data secara instan
+      // Update antarmuka publik secara langsung saat terjadi perubahan data di Firestore
       if (page === "" || page === "index.html") {
         loadLiveCounter();
         loadTrendingPrompts();
@@ -139,9 +132,11 @@ if (isRealFirebase) {
         renderAdminPrompts();
       }
     }
+  }, err => {
+    console.error("Sinkronisasi real-time Firestore terputus: ", err);
   });
 } else {
-  // Fallback lokal jika kunci API masih belum diubah pengguna
+  // Mekanisme transisi jika database belum dikonfigurasi pengembang
   document.addEventListener("DOMContentLoaded", () => {
     db_prompts = typeof SAMPLE_PROMPTS !== "undefined" ? SAMPLE_PROMPTS : [];
     updateNavCta();
@@ -150,7 +145,7 @@ if (isRealFirebase) {
 }
 
 // ============================================================
-// UTILITIES (Sama & Konsisten Tanpa Emojis)
+// SYSTEM UTILITIES (WCAG AA Compliant)
 // ============================================================
 function showToast(message, type = "success") {
   const toast = document.getElementById("toast");
@@ -204,12 +199,12 @@ function handleImageError(imageElement) {
 }
 
 // ============================================================
-// MEDIA STORAGE INTEGRATED ENGINE
+// REAL CLOUD STORAGE MEDIA UPLOADER
 // ============================================================
 function uploadMediaToFirebase(file, targetFolder) {
-  return new Promise((resolve, reject) => {
+  return new Promise((resolve) => {
     if (!isRealFirebase || !storage) {
-      // Langkah mitigasi jika menggunakan mode pengembangan tanpa storage bucket terdaftar
+      // Kebijakan fallback jika bucket Cloud Storage tidak merespon/terkonfigurasi
       resolve("assets/img/" + file.name);
       return;
     }
@@ -218,20 +213,20 @@ function uploadMediaToFirebase(file, targetFolder) {
       .then(snapshot => snapshot.ref.getDownloadURL())
       .then(downloadURL => resolve(downloadURL))
       .catch(err => {
-        console.warn("Storage upload terhambat. Mengalihkan ke direktori lokal: ", err);
+        console.warn("Koneksi Firebase Storage dibatasi, mengalihkan target folder lokal: ", err);
         resolve("assets/img/" + file.name);
       });
   });
 }
 
 // ============================================================
-// CORE NAVIGATION CTA RENDERER
+// AUTH NAVIGATION CTA CONTROLLER
 // ============================================================
 function updateNavCta() {
   const area = document.getElementById("navCtaArea");
   if (!area) return;
   if (currentUser) {
-    let dashboardLink = currentUser.role === "admin" || currentUser.role === "moderator" ? "admin.html" : "dashboard.html";
+    const dashboardLink = currentUser.role === "admin" || currentUser.role === "moderator" ? "admin.html" : "dashboard.html";
     area.innerHTML = `
       <a href="${dashboardLink}" class="btn-secondary btn-nav">Panel Kontrol</a>
       <button onclick="handleLogout()" class="btn-primary btn-nav">Keluar</button>
@@ -252,7 +247,7 @@ function handleLogout() {
 }
 
 // ============================================================
-// ROUTING DISPATCHER
+// ROUTING ROUTERS
 // ============================================================
 function runPageSpecificInit() {
   const path = window.location.pathname;
@@ -274,7 +269,7 @@ function runPageSpecificInit() {
 }
 
 // ============================================================
-// INDEX PAGE & SEARCH ENGINE (REAL-TIME UPDATED)
+// GALERI PUBLIK & PENCARIAN REAL-TIME
 // ============================================================
 function initIndexPage() {
   loadLiveCounter();
@@ -334,15 +329,15 @@ function initIndexPage() {
       const email = document.getElementById("newsletterEmail").value;
       if (isRealFirebase) {
         db.collection("newsletters").add({ email, subscribedAt: firebase.firestore.FieldValue.serverTimestamp(), status: "Aktif" })
-          .then(() => { showToast("Terima kasih, Anda telah berlangganan newsletter."); nlForm.reset(); });
+          .then(() => { showToast("Anda berhasil berlangganan newsletter."); nlForm.reset(); });
       } else {
-        showToast("Terimakasih telah mendaftarkan email Anda.");
+        showToast("Terima kasih atas langganan Anda.");
         nlForm.reset();
       }
     };
   }
 
-  // Modals
+  // Modals Controller
   const modal = document.getElementById("promptModal");
   const modalClose = document.getElementById("modalCloseBtn");
   if (modalClose) {
@@ -446,7 +441,7 @@ function filterAndRenderPrompts() {
 
   const shown = filtered.slice(0, renderLimit);
   if (shown.length === 0) {
-    gallery.innerHTML = `<div style="grid-column: 1/-1; text-align:center; padding:40px; color:var(--color-text-muted);">Tidak ada prompt yang ditemukan.</div>`;
+    gallery.innerHTML = `<div style="grid-column: 1/-1; text-align:center; padding:40px; color:var(--color-text-muted);">Tidak ada prompt yang cocok dengan pencarian Anda.</div>`;
   } else {
     gallery.innerHTML = shown.map(p => {
       const renderedImg = tempImageCache[p.id] || p.imageUrl;
@@ -483,7 +478,7 @@ function openModal(id) {
   const prompt = db_prompts.find(p => p.id === id);
   if (!prompt) return;
 
-  // Naikkan jumlah tayangan secara realtime di Firestore
+  // Catat peningkatan tayangan langsung di Firestore secara asinkron
   if (isRealFirebase) {
     db.collection("prompts").doc(prompt.id).update({
       viewCount: firebase.firestore.FieldValue.increment(1)
@@ -508,7 +503,7 @@ function openModal(id) {
     document.getElementById("modalVerified").classList.add("hidden");
   }
 
-  // Integrasi Clipboard
+  // Integrasi Papan Klip & Counter Salinan
   const btnSalin = document.getElementById("btnSalinPrompt");
   btnSalin.onclick = () => {
     navigator.clipboard.writeText(prompt.promptText).then(() => {
@@ -523,18 +518,18 @@ function openModal(id) {
     });
   };
 
-  // Simpan Koleksi Firestore (Relasi Subcollection)
+  // Simpan Relasi Subkoleksi Firestore Anggota
   const btnSimpan = document.getElementById("btnSimpanKoleksi");
   btnSimpan.onclick = () => {
     if (!currentUser) {
-      showToast("Silakan masuk terlebih dahulu untuk menyimpan ke koleksi pribadi.", "danger");
+      showToast("Silakan masuk untuk menyimpan koleksi.", "danger");
       return;
     }
     if (isRealFirebase) {
       db.collection("users").doc(currentUser.uid).collection("saved").doc(prompt.id).set({
         savedAt: firebase.firestore.FieldValue.serverTimestamp()
       }).then(() => {
-        showToast("Ditambahkan ke koleksi Anda.");
+        showToast("Prompt disimpan ke koleksi pribadi Anda.");
       });
     }
   };
@@ -543,7 +538,7 @@ function openModal(id) {
 }
 
 // ============================================================
-// PUBLIC PROMPT ENTRY MODULE (KIRIM TANPA HARUS LOGIN)
+// PUBLIC ANONYMOUS PROMPT SUBMISSION SYSTEM
 // ============================================================
 let publicUploadedImgFile = null;
 
@@ -591,7 +586,7 @@ function handlePublicPromptSubmit(e) {
   setLoadingState(btn, true);
 
   if (!publicUploadedImgFile) {
-    showToast("Unggah gambar visual ilustrasi wajib disertakan.", "danger");
+    showToast("Berkas visual wajib diunggah.", "danger");
     setLoadingState(btn, false);
     return;
   }
@@ -606,14 +601,14 @@ function handlePublicPromptSubmit(e) {
       category,
       description,
       promptText,
-      imageUrl: imgUrl, // Arah rujukan otomatis (Assets/img atau URL Firebase Storage)
+      imageUrl: imgUrl, 
       tags,
       creatorId: currentUser ? currentUser.uid : "guest",
       creatorName: creatorName,
       uploadDate: "24 Jun 2026",
       viewCount: 0,
       copyCount: 0,
-      isPublished: true, // Langsung dapat dilihat oleh publik secara real-time
+      isPublished: true, 
       isVerified: false,
       status: "Aktif"
     };
@@ -624,7 +619,7 @@ function handlePublicPromptSubmit(e) {
         document.getElementById("publicPromptForm").reset();
         document.getElementById("pubImgPreview").classList.add("hidden");
         document.getElementById("publicPromptModal").classList.remove("active");
-        showToast("Sukses menerbitkan prompt baru secara realtime!");
+        showToast("Sukses merilis prompt baru!");
       });
     }
   });
@@ -775,7 +770,7 @@ function initDashboardPage() {
 
   document.getElementById("welcomeMessageText").innerText = `Selamat datang, ${currentUser.displayName}`;
   
-  // Real-time listener untuk prompt buatan pribadi
+  // Memantau prompt pribadi anggota secara realtime
   db.collection("prompts").where("creatorId", "==", currentUser.uid).onSnapshot(snapshot => {
     let myPrompts = [];
     snapshot.forEach(doc => { myPrompts.push({ id: doc.id, ...doc.data() }); });
@@ -784,7 +779,7 @@ function initDashboardPage() {
     renderAnalytics(myPrompts);
   });
 
-  // Real-time listener untuk prompt koleksi tersimpan
+  // Memantau koleksi yang tersimpan oleh anggota secara realtime
   db.collection("users").doc(currentUser.uid).collection("saved").onSnapshot(snapshot => {
     let savedIds = [];
     snapshot.forEach(doc => { savedIds.push(doc.id); });
@@ -917,7 +912,7 @@ function handlePromptSubmit(e) {
 
     if (id) {
       db.collection("prompts").doc(id).update(payload).then(() => {
-        showToast("Perubahan prompt berhasil diterapkan secara realtime.");
+        showToast("Perubahan prompt berhasil diterapkan.");
         finalizeSubmit(btn);
       });
     } else {
@@ -932,7 +927,7 @@ function handlePromptSubmit(e) {
         isVerified: false
       };
       db.collection("prompts").doc(newId).set(fullNewPayload).then(() => {
-        showToast("Prompt berhasil dipublikasikan secara nyata.");
+        showToast("Prompt berhasil dirilis.");
         finalizeSubmit(btn);
       });
     }
@@ -1040,7 +1035,7 @@ function renderAdminPrompts() {
 function adminVerifyPrompt(id) {
   if (isRealFirebase) {
     db.collection("prompts").doc(id).update({ isVerified: true })
-      .then(() => showToast("Prompt berhasil diverifikasi secara realtime."));
+      .then(() => showToast("Prompt berhasil diverifikasi."));
   }
 }
 
@@ -1122,6 +1117,45 @@ function loadSiteSettings() {
       document.getElementById("registrationOpen").checked = data.registrationOpen || false;
       document.getElementById("moderationEnabled").checked = data.moderationEnabled || false;
     }
+  });
+}
+
+function toggleSelectAllPrompts(master) {
+  const checks = document.querySelectorAll(".admin-prompt-select");
+  checks.forEach(c => c.checked = master.checked);
+  checkBulkSelection();
+}
+
+function checkBulkSelection() {
+  const checks = document.querySelectorAll(".admin-prompt-select:checked");
+  const bar = document.getElementById("bulkActionsBar");
+  if (!bar) return;
+  if (checks.length > 0) {
+    document.getElementById("bulkSelectedText").innerText = `${checks.length} baris terpilih`;
+    bar.classList.remove("hidden");
+  } else {
+    bar.classList.add("hidden");
+  }
+}
+
+function handleBulkAction(action) {
+  const checkedBoxes = document.querySelectorAll(".admin-prompt-select:checked");
+  const ids = Array.from(checkedBoxes).map(c => c.value);
+  
+  showConfirmDialog("Jalankan Aksi Masal?", `Apakah Anda yakin ingin menjalankan tindakan ${action} pada ${ids.length} prompt ini?`, () => {
+    if (action === "delete") {
+      db_prompts = db_prompts.filter(p => !ids.includes(p.id));
+    } else if (action === "approve") {
+      db_prompts.forEach((p, idx) => { if (ids.includes(p.id)) db_prompts[idx].status = "Aktif"; });
+    } else if (action === "hide") {
+      db_prompts.forEach((p, idx) => { if (ids.includes(p.id)) db_prompts[idx].status = "Tersembunyi"; });
+    }
+    setStoredData("prompts", db_prompts);
+    showToast("Tindakan masal berhasil diterapkan.");
+    document.getElementById("bulkActionsBar").classList.add("hidden");
+    document.getElementById("selectAllPrompts").checked = false;
+    renderAdminPrompts();
+    loadAdminStats();
   });
 }
 
