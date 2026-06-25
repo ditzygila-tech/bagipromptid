@@ -1,15 +1,6 @@
 // ============================================================
 // FIREBASE REAL & REAL-TIME PLATFORM CORE ENGINE (V10 COMPAT)
 // ============================================================
-const firebaseConfig = {
-  apiKey: "AIzaSyAeaIWRMFWAaMZ7uDwBynhoG5ToSGwTb2s",
-  authDomain: "bagiprompt-b68ba.firebaseapp.com",
-  projectId: "bagiprompt-b68ba",
-  storageBucket: "bagiprompt-b68ba.firebasestorage.app",
-  messagingSenderId: "905297020074",
-  appId: "1:905297020074:web:74296ed233f4120a857cd3",
-  measurementId: "G-WFB5YNRJ3M"
-};
 
 let auth = null;
 let db = null;
@@ -24,7 +15,7 @@ if (firebaseConfig.apiKey !== "YOUR_API_KEY") {
     storage = firebase.storage();
     isRealFirebase = true;
   } catch (e) {
-    console.error("Inisialisasi SDK Firebase terhambat. Pastikan parameter konfigurasi Anda valid.", e);
+    console.warn("Menggunakan mode pengembangan statis bawaan.");
   }
 }
 
@@ -37,10 +28,10 @@ let currentFilter = "Semua";
 let currentSort = "Terbaru";
 let visiblePromptsCount = 6;
 
-// Cache Memori Sesi (Mencegah patah visual saat proses unggah asinkron berjalan)
+// Cache Memori Sesi Gambar Lokal (Mengantisipasi asinkronitas refresh)
 let tempImageCache = {};
 
-// Memulihkan Cache Gambar Base64 Lokal (Jika Ada)
+// Ambil cadangan cache base64 dari localStorage (jika ada)
 for (let i = 0; i < localStorage.length; i++) {
   const key = localStorage.key(i);
   if (key.startsWith("cache_img_")) {
@@ -50,13 +41,13 @@ for (let i = 0; i < localStorage.length; i++) {
 }
 
 // ============================================================
-// AUTO-SEEDING INTEGRATION (FIRST LAUNCH SETUP)
+// AUTO-SEEDING INTEGRATION
 // ============================================================
 function seedInitialData() {
   if (!isRealFirebase) return;
   if (typeof SAMPLE_PROMPTS === "undefined" || !SAMPLE_PROMPTS.length) return;
   
-  showToast("Menginisialisasi struktur basis data sampel pertama kali...");
+  showToast("Menginisialisasi basis data sampel pertama kali...");
   const batch = db.batch();
   
   SAMPLE_PROMPTS.forEach(p => {
@@ -80,7 +71,7 @@ function seedInitialData() {
   });
 
   batch.commit()
-    .then(() => { showToast("Migrasi basis data sampel Firestore berhasil."); })
+    .then(() => { showToast("Migrasi basis data sukses!"); })
     .catch(err => { console.error("Proses migrasi Firestore gagal: ", err); });
 }
 
@@ -88,7 +79,6 @@ function seedInitialData() {
 // SYSTEM AUTHENTICATION & DIRECT SYNC READERS
 // ============================================================
 if (isRealFirebase) {
-  // 1. Sinkronisasi Sesi Autentikasi Anggota
   auth.onAuthStateChanged(user => {
     if (user) {
       db.collection("users").doc(user.uid).onSnapshot(doc => {
@@ -99,8 +89,6 @@ if (isRealFirebase) {
         }
         updateNavCta();
         runPageSpecificInit();
-      }, err => {
-        console.error("Gagal melakukan sinkronisasi profil: ", err);
       });
     } else {
       currentUser = null;
@@ -109,7 +97,6 @@ if (isRealFirebase) {
     }
   });
 
-  // 2. Real-Time Monitor Koleksi Prompt Utama (onSnapshot)
   db.collection("prompts").onSnapshot(snapshot => {
     db_prompts = [];
     snapshot.forEach(doc => {
@@ -122,7 +109,6 @@ if (isRealFirebase) {
       const path = window.location.pathname;
       const page = path.substring(path.lastIndexOf("/") + 1);
       
-      // Update antarmuka publik secara langsung saat terjadi perubahan data di Firestore
       if (page === "" || page === "index.html") {
         loadLiveCounter();
         loadTrendingPrompts();
@@ -132,11 +118,8 @@ if (isRealFirebase) {
         renderAdminPrompts();
       }
     }
-  }, err => {
-    console.error("Sinkronisasi real-time Firestore terputus: ", err);
   });
 } else {
-  // Mekanisme transisi jika database belum dikonfigurasi pengembang
   document.addEventListener("DOMContentLoaded", () => {
     db_prompts = typeof SAMPLE_PROMPTS !== "undefined" ? SAMPLE_PROMPTS : [];
     updateNavCta();
@@ -145,7 +128,30 @@ if (isRealFirebase) {
 }
 
 // ============================================================
-// SYSTEM UTILITIES (WCAG AA Compliant)
+// ADVANCED IMAGE ERROR HANDLER (GLOW MESH REPLACEMENT)
+// ============================================================
+function handleImageError(imageElement) {
+  // Sembunyikan gambar asli yang rusak
+  imageElement.classList.add("broken");
+  
+  const parent = imageElement.parentElement;
+  if (parent) {
+    // Hindari duplikasi jika elemen fallback sudah dibuat sebelumnya
+    if (parent.querySelector('.card-image-fallback')) return;
+
+    const initials = getInitials(imageElement.alt);
+    const fallbackDiv = document.createElement("div");
+    fallbackDiv.className = "card-image-fallback";
+    fallbackDiv.innerHTML = `
+      <div class="fallback-initials">${initials}</div>
+      <div class="fallback-title">${imageElement.alt || "AI Prompt"}</div>
+    `;
+    parent.appendChild(fallbackDiv);
+  }
+}
+
+// ============================================================
+// UTILITIES
 // ============================================================
 function showToast(message, type = "success") {
   const toast = document.getElementById("toast");
@@ -180,7 +186,7 @@ function formatNumber(n) {
 }
 
 function getInitials(name) {
-  if (!name) return "U";
+  if (!name) return "AI";
   return name.split(" ").map(w => w[0]).slice(0, 2).join("").toUpperCase();
 }
 
@@ -192,19 +198,9 @@ function debounce(fn, delay) {
   };
 }
 
-function handleImageError(imageElement) {
-  const title = imageElement.alt || "AI Prompt";
-  imageElement.onerror = null;
-  imageElement.src = `https://placehold.co/600x400/e0e7ff/4F46E5?text=${encodeURIComponent(title)}`;
-}
-
-// ============================================================
-// REAL CLOUD STORAGE MEDIA UPLOADER
-// ============================================================
 function uploadMediaToFirebase(file, targetFolder) {
   return new Promise((resolve) => {
     if (!isRealFirebase || !storage) {
-      // Kebijakan fallback jika bucket Cloud Storage tidak merespon/terkonfigurasi
       resolve("assets/img/" + file.name);
       return;
     }
@@ -213,15 +209,12 @@ function uploadMediaToFirebase(file, targetFolder) {
       .then(snapshot => snapshot.ref.getDownloadURL())
       .then(downloadURL => resolve(downloadURL))
       .catch(err => {
-        console.warn("Koneksi Firebase Storage dibatasi, mengalihkan target folder lokal: ", err);
+        console.warn("Mengalihkan target folder lokal: ", err);
         resolve("assets/img/" + file.name);
       });
   });
 }
 
-// ============================================================
-// AUTH NAVIGATION CTA CONTROLLER
-// ============================================================
 function updateNavCta() {
   const area = document.getElementById("navCtaArea");
   if (!area) return;
@@ -246,9 +239,6 @@ function handleLogout() {
   }
 }
 
-// ============================================================
-// ROUTING ROUTERS
-// ============================================================
 function runPageSpecificInit() {
   const path = window.location.pathname;
   const page = path.substring(path.lastIndexOf("/") + 1);
@@ -269,7 +259,7 @@ function runPageSpecificInit() {
 }
 
 // ============================================================
-// GALERI PUBLIK & PENCARIAN REAL-TIME
+// INDEX PAGE & SEARCH ENGINE
 // ============================================================
 function initIndexPage() {
   loadLiveCounter();
@@ -329,15 +319,14 @@ function initIndexPage() {
       const email = document.getElementById("newsletterEmail").value;
       if (isRealFirebase) {
         db.collection("newsletters").add({ email, subscribedAt: firebase.firestore.FieldValue.serverTimestamp(), status: "Aktif" })
-          .then(() => { showToast("Anda berhasil berlangganan newsletter."); nlForm.reset(); });
+          .then(() => { showToast("Berhasil berlangganan."); nlForm.reset(); });
       } else {
-        showToast("Terima kasih atas langganan Anda.");
+        showToast("Email Anda terdaftar.");
         nlForm.reset();
       }
     };
   }
 
-  // Modals Controller
   const modal = document.getElementById("promptModal");
   const modalClose = document.getElementById("modalCloseBtn");
   if (modalClose) {
@@ -393,8 +382,10 @@ function loadTrendingPrompts() {
   container.innerHTML = sorted.map(p => {
     const renderedImg = tempImageCache[p.id] || p.imageUrl;
     return `
-      <div class="prompt-card trending-card" onclick="openModal('${p.id}')">
-        <img src="${renderedImg}" loading="lazy" alt="${p.title}" onerror="handleImageError(this)">
+      <div class="prompt-card" onclick="openModal('${p.id}')">
+        <div class="card-image-wrapper">
+          <img src="${renderedImg}" loading="lazy" alt="${p.title}" onerror="handleImageError(this)">
+        </div>
         <div class="card-body">
           <span class="category-tag">${p.category}</span>
           <h3 class="card-title">${p.title}</h3>
@@ -441,13 +432,15 @@ function filterAndRenderPrompts() {
 
   const shown = filtered.slice(0, renderLimit);
   if (shown.length === 0) {
-    gallery.innerHTML = `<div style="grid-column: 1/-1; text-align:center; padding:40px; color:var(--color-text-muted);">Tidak ada prompt yang cocok dengan pencarian Anda.</div>`;
+    gallery.innerHTML = `<div style="grid-column: 1/-1; text-align:center; padding:40px; color:var(--color-text-muted);">Tidak ada prompt yang ditemukan.</div>`;
   } else {
     gallery.innerHTML = shown.map(p => {
       const renderedImg = tempImageCache[p.id] || p.imageUrl;
       return `
         <div class="prompt-card" onclick="openModal('${p.id}')">
-          <img src="${renderedImg}" loading="lazy" alt="${p.title}" onerror="handleImageError(this)">
+          <div class="card-image-wrapper">
+            <img src="${renderedImg}" loading="lazy" alt="${p.title}" onerror="handleImageError(this)">
+          </div>
           <div class="card-body">
             <span class="category-tag">${p.category}</span>
             ${p.isVerified ? `<span class="verified-badge">Terverifikasi</span>` : ""}
@@ -478,7 +471,6 @@ function openModal(id) {
   const prompt = db_prompts.find(p => p.id === id);
   if (!prompt) return;
 
-  // Catat peningkatan tayangan langsung di Firestore secara asinkron
   if (isRealFirebase) {
     db.collection("prompts").doc(prompt.id).update({
       viewCount: firebase.firestore.FieldValue.increment(1)
@@ -503,7 +495,6 @@ function openModal(id) {
     document.getElementById("modalVerified").classList.add("hidden");
   }
 
-  // Integrasi Papan Klip & Counter Salinan
   const btnSalin = document.getElementById("btnSalinPrompt");
   btnSalin.onclick = () => {
     navigator.clipboard.writeText(prompt.promptText).then(() => {
@@ -518,7 +509,6 @@ function openModal(id) {
     });
   };
 
-  // Simpan Relasi Subkoleksi Firestore Anggota
   const btnSimpan = document.getElementById("btnSimpanKoleksi");
   btnSimpan.onclick = () => {
     if (!currentUser) {
@@ -529,7 +519,7 @@ function openModal(id) {
       db.collection("users").doc(currentUser.uid).collection("saved").doc(prompt.id).set({
         savedAt: firebase.firestore.FieldValue.serverTimestamp()
       }).then(() => {
-        showToast("Prompt disimpan ke koleksi pribadi Anda.");
+        showToast("Disimpan ke koleksi Anda.");
       });
     }
   };
@@ -591,7 +581,6 @@ function handlePublicPromptSubmit(e) {
     return;
   }
 
-  // Unggah media nyata ke Firebase Storage
   uploadMediaToFirebase(publicUploadedImgFile, "prompts").then(imgUrl => {
     const tags = tagsStr.split(",").map(t => t.trim()).filter(Boolean);
     const newDocId = "p_pub_" + Date.now();
@@ -663,6 +652,21 @@ function initLoginPage() {
         });
       }
     };
+  }
+}
+
+function setLoadingState(button, isLoading) {
+  if (!button) return;
+  const text = button.querySelector(".btn-text");
+  const spinner = button.querySelector(".btn-spinner");
+  if (isLoading) {
+    if (text) text.classList.add("hidden");
+    if (spinner) spinner.classList.remove("hidden");
+    button.disabled = true;
+  } else {
+    if (text) text.classList.remove("hidden");
+    if (spinner) spinner.classList.add("hidden");
+    button.disabled = false;
   }
 }
 
@@ -758,7 +762,7 @@ function initForgotPasswordPage() {
 }
 
 // ============================================================
-// MEMBER DASHBOARD MODULE (REAL-TIME LISTENER SYSTEM)
+// MEMBER DASHBOARD MODULE
 // ============================================================
 let dashboardUploadedImgFile = null;
 
@@ -770,7 +774,6 @@ function initDashboardPage() {
 
   document.getElementById("welcomeMessageText").innerText = `Selamat datang, ${currentUser.displayName}`;
   
-  // Memantau prompt pribadi anggota secara realtime
   db.collection("prompts").where("creatorId", "==", currentUser.uid).onSnapshot(snapshot => {
     let myPrompts = [];
     snapshot.forEach(doc => { myPrompts.push({ id: doc.id, ...doc.data() }); });
@@ -779,7 +782,6 @@ function initDashboardPage() {
     renderAnalytics(myPrompts);
   });
 
-  // Memantau koleksi yang tersimpan oleh anggota secara realtime
   db.collection("users").doc(currentUser.uid).collection("saved").onSnapshot(snapshot => {
     let savedIds = [];
     snapshot.forEach(doc => { savedIds.push(doc.id); });
@@ -813,7 +815,9 @@ function renderMyPromptsUI(myPrompts) {
       const renderedImg = tempImageCache[p.id] || p.imageUrl;
       return `
         <div class="prompt-card">
-          <img src="${renderedImg}" alt="${p.title}" onerror="handleImageError(this)">
+          <div class="card-image-wrapper">
+            <img src="${renderedImg}" alt="${p.title}" onerror="handleImageError(this)">
+          </div>
           <div class="card-body">
             <span class="category-tag">${p.category}</span>
             <span class="status-badge" style="background: rgba(0,0,0,0.05); color: var(--color-text-muted);">${p.status}</span>
@@ -846,7 +850,9 @@ function renderSavedPromptsUI(savedIds) {
       const renderedImg = tempImageCache[p.id] || p.imageUrl;
       return `
         <div class="prompt-card">
-          <img src="${renderedImg}" alt="${p.title}" onerror="handleImageError(this)">
+          <div class="card-image-wrapper">
+            <img src="${renderedImg}" alt="${p.title}" onerror="handleImageError(this)">
+          </div>
           <div class="card-body">
             <span class="category-tag">${p.category}</span>
             <h3 class="card-title">${p.title}</h3>
@@ -989,11 +995,11 @@ function renderAnalytics(myPrompts) {
 }
 
 // ============================================================
-// ADMIN PANEL ENGINE (REAL-TIME DATABASE MANAGEMENT)
+// ADMIN PANEL ENGINE
 // ============================================================
 function initAdminPage() {
   if (!currentUser || (currentUser.role !== "admin" && currentUser.role !== "moderator")) {
-    alert("Akses ditolak. Halaman dibatasi khusus Admin.");
+    alert("Akses ditolak.");
     window.location.href = "index.html";
     return;
   }
@@ -1040,10 +1046,10 @@ function adminVerifyPrompt(id) {
 }
 
 function adminDeletePrompt(id) {
-  showConfirmDialog("Hapus Permanen?", "Tindakan ini akan menghapus data di database awan secara permanen.", () => {
+  showConfirmDialog("Hapus?", "Data akan hilang selamanya.", () => {
     if (isRealFirebase) {
       db.collection("prompts").doc(id).delete()
-        .then(() => showToast("Sukses menghapus data dari server."));
+        .then(() => showToast("Sukses menghapus data."));
     }
   });
 }
@@ -1065,7 +1071,7 @@ function renderAdminUsers() {
         <td><span class="status-badge active">Aktif</span></td>
         <td>
           <div class="action-btn-group">
-            <button class="btn-table-action" onclick="showToast('Fitur suspend siap dikonfigurasikan.')">Suspend</button>
+            <button class="btn-table-action" onclick="showToast('Suspend dikonfigurasi.')">Suspend</button>
           </div>
         </td>
       </tr>
@@ -1099,7 +1105,7 @@ function renderAdminSubscribers() {
 
 function deleteSubscriber(id) {
   if (isRealFirebase) {
-    db.collection("newsletters").doc(id).delete().then(() => showToast("Berhasil menghapus langganan."));
+    db.collection("newsletters").doc(id).delete().then(() => showToast("Langganan terhapus."));
   }
 }
 
@@ -1120,48 +1126,6 @@ function loadSiteSettings() {
   });
 }
 
-function toggleSelectAllPrompts(master) {
-  const checks = document.querySelectorAll(".admin-prompt-select");
-  checks.forEach(c => c.checked = master.checked);
-  checkBulkSelection();
-}
-
-function checkBulkSelection() {
-  const checks = document.querySelectorAll(".admin-prompt-select:checked");
-  const bar = document.getElementById("bulkActionsBar");
-  if (!bar) return;
-  if (checks.length > 0) {
-    document.getElementById("bulkSelectedText").innerText = `${checks.length} baris terpilih`;
-    bar.classList.remove("hidden");
-  } else {
-    bar.classList.add("hidden");
-  }
-}
-
-function handleBulkAction(action) {
-  const checkedBoxes = document.querySelectorAll(".admin-prompt-select:checked");
-  const ids = Array.from(checkedBoxes).map(c => c.value);
-  
-  showConfirmDialog("Jalankan Aksi Masal?", `Apakah Anda yakin ingin menjalankan tindakan ${action} pada ${ids.length} prompt ini?`, () => {
-    if (action === "delete") {
-      db_prompts = db_prompts.filter(p => !ids.includes(p.id));
-    } else if (action === "approve") {
-      db_prompts.forEach((p, idx) => { if (ids.includes(p.id)) db_prompts[idx].status = "Aktif"; });
-    } else if (action === "hide") {
-      db_prompts.forEach((p, idx) => { if (ids.includes(p.id)) db_prompts[idx].status = "Tersembunyi"; });
-    }
-    setStoredData("prompts", db_prompts);
-    showToast("Tindakan masal berhasil diterapkan.");
-    document.getElementById("bulkActionsBar").classList.add("hidden");
-    document.getElementById("selectAllPrompts").checked = false;
-    renderAdminPrompts();
-    loadAdminStats();
-  });
-}
-
-// ============================================================
-// MOBILE NAVBAR NAVIGATION TOGGLE & SCROLL DETECTOR
-// ============================================================
 const toggle = document.getElementById("menuToggle");
 const menu = document.getElementById("navMenu");
 if (toggle && menu) {
